@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using System;
 using NLog;
 using ServiceStack;
+using System.Linq;
 
 public class TriviaController : Controller
 {
@@ -58,23 +59,11 @@ public class TriviaController : Controller
     public async Task<string> LoadTriviaQuestionAsync()
     {
         _logger.Info("Loading trivia");
-        var clues = await SendHttpRequest(new GetClues { });
+        var clues = await SendHttpRequest(new GetRandomClues { Count = 1 });
+        var clue = clues.First();
 
-        foreach (var clue in clues)
-        {
-            _logger.Trace("{Question}: {Answer}", clue.Question, clue.Answer);
-        }
-
-        _logger.Debug("Found {Count} clues", clues.Count);
-        var builder = new StringBuilder();
-
-        foreach (var clue in clues)
-        {
-            builder.AppendLine($"{clue.Question}");
-        }
-
-        _logger.Trace("Writing response to discord bot");
-        return builder.ToString();
+        var response = $"{clue.Question}|{clue.Answer}";
+        return response;
     }
 
 
@@ -158,6 +147,11 @@ internal class Clue
     public Category Category { get; set; }
 }
 
+[Route("/random")]
+internal class GetRandomClues : IReturn<List<Clue>>
+{
+    public int Count { get; set; }
+}
 
 
 [Route("/clues")]

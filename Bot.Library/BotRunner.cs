@@ -115,8 +115,20 @@ namespace Bot.Library
 
                 _logger.Debug("Message should be treated as a command");
 
-                var response = cliClient.Run(new string[] { socketMessage.Content });
+                var response = cliClient.Run<string>(new string[] { socketMessage.Content }); 
 
+                var split = response.Split("|");
+                var question = split[0];
+                var answer = split[1];
+
+                await socketUserMessage.Channel.SendMessageAsync(question);
+                await socketUserMessage.Channel.SendMessageAsync("Answer in..");
+                for (var second = 5; second > 0; second--)
+                {
+                    await socketUserMessage.Channel.SendMessageAsync(second.ToString());
+                    await Task.Delay(750);
+                }
+                await socketUserMessage.Channel.SendMessageAsync(answer);
                 return;
             };
         }
