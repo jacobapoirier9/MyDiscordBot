@@ -17,8 +17,6 @@ namespace Bot.Library
     public class BotRunner
     {
         private static readonly ILogger _logger = LogManager.GetCurrentClassLogger();
-        // URL used to authorize my account for this discord bot and the permissions it requires
-        // https://discord.com/api/oauth2/authorize?client_id=999429756019818506&permissions=2153778176&scope=bot
 
         public async Task RunAsync(string[] args)
         {
