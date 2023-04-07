@@ -132,13 +132,5 @@ namespace Bot.Library
                 return;
             };
         }
-
-        private void GetCliClient()
-        {
-            var client = Client.Create()
-                .AddControllers();
-
-
-        }
     }
 }
