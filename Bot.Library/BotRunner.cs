@@ -1,5 +1,5 @@
 ﻿using Bot.Library.Services;
-using CliHelper;
+using CommandSurfacer;
 using Discord;
 using Discord.Commands;
 using Discord.Interactions;
@@ -20,7 +20,7 @@ namespace Bot.Library
 
         public async Task RunAsync(string[] args)
         {
-            var discordClient = new DiscordSocketClient(new DiscordSocketConfig
+            var discord = new DiscordSocketClient(new DiscordSocketConfig
             {
                 GatewayIntents = GatewayIntents.All
             });
@@ -40,28 +40,27 @@ namespace Bot.Library
                 .AddCommandLine(args)
                 .Build() as IConfiguration;
 
-            var cliClient = Client.Create()
-                .AddControllers()
+            var cli = Client.Create()
                 .AddServices(services =>
                 {
-                    services.AddSingleton(discordClient);
+                    services.AddSingleton(discord);
                     services.AddSingleton(configuration);
                     services.AddSingleton<IDiscordService, DiscordService>();
                 });
 
-            var assembly = Assembly.GetExecutingAssembly();
+            //var assembly = Assembly.GetExecutingAssembly();
 
-            ConfigureDiscordSocketClient(discordClient, cliClient);
+            ConfigureDiscordSocketClient(discord, cli);
 
-            await discordClient.LoginAsync(TokenType.Bot, configuration.GetValue<string>("Discord:Token"));
-            await discordClient.StartAsync();
+            await discord.LoginAsync(TokenType.Bot, configuration.GetValue<string>("Discord:Token"));
+            await discord.StartAsync();
 
             await Task.Delay(-1);
         }
 
-        private void ConfigureDiscordSocketClient(DiscordSocketClient client, Client cliClient)
+        private void ConfigureDiscordSocketClient(DiscordSocketClient discord, Client cli)
         {
-            client.Log += (message) =>
+            discord.Log += (message) =>
             {
                 switch (message.Severity)
                 {
@@ -91,7 +90,7 @@ namespace Bot.Library
                 return Task.CompletedTask;
             };
 
-            client.MessageReceived += async (socketMessage) =>
+            discord.MessageReceived += async (socketMessage) =>
             {
                 if (socketMessage is null)
                     return;
@@ -103,7 +102,7 @@ namespace Bot.Library
 
                 var notUsed = 0;
                 if (
-                    socketUserMessage.HasMentionPrefix(client.CurrentUser, ref notUsed) ||
+                    socketUserMessage.HasMentionPrefix(discord.CurrentUser, ref notUsed) ||
                     socketMessage.Author.IsBot
                 )
                 {
@@ -113,21 +112,23 @@ namespace Bot.Library
 
                 _logger.Debug("Message should be treated as a command");
 
-                var response = cliClient.Run<string>(new string[] { socketMessage.Content }); 
+                await cli.RunAsync(socketMessage.Content);
 
-                var split = response.Split("|");
-                var question = split[0];
-                var answer = split[1];
+                //var response = cli.Run<string>(new string[] { socketMessage.Content }); 
 
-                await socketUserMessage.Channel.SendMessageAsync(question);
-                await socketUserMessage.Channel.SendMessageAsync("Answer in..");
-                for (var second = 5; second > 0; second--)
-                {
-                    await socketUserMessage.Channel.SendMessageAsync(second.ToString());
-                    await Task.Delay(750);
-                }
-                await socketUserMessage.Channel.SendMessageAsync(answer);
-                return;
+                //var split = response.Split("|");
+                //var question = split[0];
+                //var answer = split[1];
+
+                //await socketUserMessage.Channel.SendMessageAsync(question);
+                //await socketUserMessage.Channel.SendMessageAsync("Answer in..");
+                //for (var second = 5; second > 0; second--)
+                //{
+                //    await socketUserMessage.Channel.SendMessageAsync(second.ToString());
+                //    await Task.Delay(750);
+                //}
+                //await socketUserMessage.Channel.SendMessageAsync(answer);
+                //return;
             };
         }
     }
