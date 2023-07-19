@@ -2,30 +2,29 @@
 using System.ServiceProcess;
 using System.Threading.Tasks;
 
-namespace Bot.ConsoleRunner
-{
-    class Program
-    {
-        static async Task Main(string[] args)
-        {
-            if (System.Diagnostics.Debugger.IsAttached)
-            {
-                await new BotRunner().RunAsync(args);
-            }
-            else
-            {
-                #pragma warning disable CA1416
-                ServiceBase.Run(new Service());
-            }
-        }
-    }
+namespace Bot.ConsoleRunner;
 
-    public class Service : ServiceBase
+internal static class Program
+{
+    static async Task Main(string[] args)
     {
-        protected override async void OnStart(string[] args)
+        if (System.Diagnostics.Debugger.IsAttached)
         {
             await new BotRunner().RunAsync(args);
-            base.OnStart(args);
         }
+        else
+        {
+#pragma warning disable CA1416
+            ServiceBase.Run(new Service());
+        }
+    }
+}
+
+internal class Service : ServiceBase
+{
+    protected override async void OnStart(string[] args)
+    {
+        await new BotRunner().RunAsync(args);
+        base.OnStart(args);
     }
 }

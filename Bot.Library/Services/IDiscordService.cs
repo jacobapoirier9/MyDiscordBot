@@ -1,7 +1,6 @@
-﻿namespace Bot.Library.Services
-{
-    public interface IDiscordService
-    {
+﻿namespace Bot.Library.Services;
 
-    }
+public interface IDiscordService
+{
+
 }
