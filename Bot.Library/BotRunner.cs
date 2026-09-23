@@ -2,10 +2,14 @@
 using CommandSurfacer;
 using Discord;
 using Discord.Commands;
+using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using NLog;
+using System;
+using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace Bot.Library;
@@ -36,6 +40,7 @@ public class BotRunner
             .AddCommandLine(args)
             .Build() as IConfiguration;
 
+
         var cli = Client.Create()
             .AddServices(services =>
             {
@@ -44,9 +49,24 @@ public class BotRunner
                 services.AddSingleton<IDiscordService, DiscordService>();
             });
 
-        //var assembly = Assembly.GetExecutingAssembly();
+        var assembly = Assembly.GetExecutingAssembly();
 
-        ConfigureDiscordSocketClient(discord, cli);
+        var services = new ServiceCollection()
+            .AddSingleton(configuration)
+            .AddSingleton<IDiscordService, DiscordService>()
+            .BuildServiceProvider() as IServiceProvider;
+
+        var commands = new CommandService();
+        var interactions = new InteractionService(discord.Rest);
+
+        await commands.AddModulesAsync(assembly, services);
+
+        ConfigureDiscordEventListeners(discord, commands, cli);
+        discord.InteractionCreated += async (socketInteraction) =>
+        {
+            var context = new SocketInteractionContext(discord, socketInteraction);
+            await interactions.ExecuteCommandAsync(context, services);
+        };
 
         await discord.LoginAsync(TokenType.Bot, configuration.GetValue<string>("Discord:Token"));
         await discord.StartAsync();
@@ -54,7 +74,7 @@ public class BotRunner
         await Task.Delay(-1);
     }
 
-    private void ConfigureDiscordSocketClient(DiscordSocketClient discord, Client cli)
+    private void ConfigureDiscordEventListeners(DiscordSocketClient discord, CommandService commands, Client cli)
     {
         discord.Log += (message) =>
         {
@@ -93,7 +113,7 @@ public class BotRunner
 
             var socketUserMessage = socketMessage as SocketUserMessage;
 
-            // Determine if the message is a command based on the prefix and make sure no bots trigger commands
+            // Determine if the socketMessage is a command based on the prefix and make sure no bots trigger commands
             _logger.Trace("Message Received. User: {User}, Channel: {Channel}, Message: {Message}", socketUserMessage.Author.Username, socketUserMessage.Channel.Name, socketUserMessage.Content);
 
             var notUsed = 0;
@@ -108,7 +128,10 @@ public class BotRunner
 
             _logger.Debug("Message should be treated as a command");
 
-            await cli.RunAsync(socketMessage.Content);
+            //await cli.RunAsync(socketMessage.Content);
+
+            var context = new SocketCommandContext(discord, socketUserMessage);
+            await commands.ExecuteAsync(context, notUsed, null);
 
             //var response = cli.Run<string>(new string[] { socketMessage.Content }); 
 
@@ -126,5 +149,24 @@ public class BotRunner
             //await socketUserMessage.Channel.SendMessageAsync(answer);
             //return;
         };
+
     }
 }
+
+public class TestCommands : ModuleBase<SocketCommandContext>
+{
+    [Command("test")]
+    public async Task Test()
+    {
+        await ReplyAsync("Hello World");
+    }
+}
+
+//public class InteractiveCommands : SlashComm<SocketInteractionContext<SocketMessageComponent>>
+//{
+//    [SlashCommand("test2", "Hello")]
+//    public async Task Test()
+//    {
+//        await ReplyAsync("hello World 1");
+//    }
+//}
